@@ -164,27 +164,150 @@ void Tensor::debug() const {
 }
 
 bool Tensor::isContiguous() const {
-    TO_BE_IMPLEMENTED();
+      if (this->ndim() == 0 || this->numel() == 0) {                                                                 
+          return true;                                                                                               
+      }
+
+      ptrdiff_t expected = 1;  // 最后一维 stride 应为 1
+
+      for (int i = this->ndim() - 1; i >= 0; i--) {
+          // 如果当前维的 size > 1，stride 必须等于 expected
+          if (this->shape()[i] > 1 && this->strides()[i] != expected) {
+              return false;
+          }
+          // 更新 expected：往前一维，expected 要乘以当前维的 size
+          expected *= this->shape()[i];
+      }
     return true;
 }
 
 tensor_t Tensor::permute(const std::vector<size_t> &order) const {
-    TO_BE_IMPLEMENTED();
-    return std::shared_ptr<Tensor>(new Tensor(_meta, _storage));
+    //检查 order 长度是否匹配
+    CHECK_ARGUMENT(order.size() == this->ndim(),
+                   "permute() order size must match tensor ndim.");
+
+    //按 order 重排 shape 和 strides 
+    std::vector<size_t> new_shape(this->ndim());
+    std::vector<ptrdiff_t> new_strides(this->ndim());
+
+    for (size_t i = 0; i < this->ndim(); i++) {
+        size_t old_dim = order[i];
+        new_shape[i] = this->shape()[old_dim];
+        new_strides[i] = this->strides()[old_dim];
+    }
+
+    //用新 meta 创建张量，共享同一块内存 
+    TensorMeta new_meta;
+    new_meta.dtype = this->dtype();
+    new_meta.shape = new_shape;
+    new_meta.strides = new_strides;
+
+    return std::shared_ptr<Tensor>(new Tensor(new_meta, _storage, _offset));
 }
 
-tensor_t Tensor::view(const std::vector<size_t> &shape) const {
-    TO_BE_IMPLEMENTED();
-    return std::shared_ptr<Tensor>(new Tensor(_meta, _storage));
+tensor_t Tensor::view(const std::vector<size_t> &new_shape) const {
+    //检查总元素数是否一致 
+    size_t new_numel = 1;
+    for (size_t i = 0; i < new_shape.size(); i++) {
+        new_numel = new_numel * new_shape[i];
+    }
+    CHECK_ARGUMENT(new_numel == this->numel(),
+                   "view() total elements must stay the same.");
+
+    //计算新的 strides 
+    int old_i = (int)(this->ndim()) - 1;
+    int new_i = (int)(new_shape.size()) - 1;
+
+    std::vector<ptrdiff_t> new_strides(new_shape.size());
+
+    while (new_i >= 0 && old_i >= 0) {
+        //在老张量里找一个连续块
+        size_t block_size = this->shape()[old_i];
+        ptrdiff_t block_inner_stride = this->strides()[old_i];
+
+        while (old_i > 0) {
+            ptrdiff_t expected_left_stride =
+                (ptrdiff_t)(this->strides()[old_i] * this->shape()[old_i]);
+            ptrdiff_t actual_left_stride = this->strides()[old_i - 1];
+            if (actual_left_stride != expected_left_stride) {
+                break;
+            }
+            old_i = old_i - 1;
+            block_size = block_size * this->shape()[old_i];
+        }
+
+        //用新维度来瓜分这个块 
+        size_t new_block_size = new_shape[new_i];
+        int new_start = new_i;
+
+        while (new_i > 0 && new_block_size < block_size) {
+            new_i = new_i - 1;
+            new_block_size = new_block_size * new_shape[new_i];
+        }
+
+        //瓜分完必须严丝合缝
+        CHECK_ARGUMENT(new_block_size == block_size,
+                       "view() shape is not compatible with strides.");
+
+        //从右往左填这一批新维度的 stride 
+        ptrdiff_t stride = block_inner_stride;
+        for (int k = new_start; k >= new_i; k--) {
+            new_strides[k] = stride;
+            stride = stride * (ptrdiff_t)(new_shape[k]);
+        }
+
+        //两块游标都往左移 
+        old_i = old_i - 1;
+        new_i = new_i - 1;
+    }
+
+    //创建新张量，共享同一块内存
+    TensorMeta new_meta;
+    new_meta.dtype = this->dtype();
+    new_meta.shape = new_shape;
+    new_meta.strides = new_strides;
+    return std::shared_ptr<Tensor>(new Tensor(new_meta, _storage, _offset));
 }
 
 tensor_t Tensor::slice(size_t dim, size_t start, size_t end) const {
-    TO_BE_IMPLEMENTED();
-    return std::shared_ptr<Tensor>(new Tensor(_meta, _storage));
+    //检查参数合法性
+    CHECK_ARGUMENT(dim < this->ndim(),
+                   "slice() dim out of range.");
+    CHECK_ARGUMENT(start < end,
+                   "slice() start must be less than end.");
+    CHECK_ARGUMENT(end <= this->shape()[dim],
+                   "slice() end out of range.");
+
+    //计算新 shape（只改当前 dim）
+    std::vector<size_t> new_shape = this->shape();
+    new_shape[dim] = end - start;
+
+    //strides 保持不变
+    std::vector<ptrdiff_t> new_strides = this->strides();
+
+    //计算新 offset（跳过 start 个元素对应的字节数）
+    size_t new_offset = _offset +
+        start * (size_t)(this->strides()[dim]) * this->elementSize();
+
+    //创建新张量，共享同一块内存 
+    TensorMeta new_meta;
+    new_meta.dtype = this->dtype();
+    new_meta.shape = new_shape;
+    new_meta.strides = new_strides;
+
+    return std::shared_ptr<Tensor>(new Tensor(new_meta, _storage, new_offset));
 }
 
 void Tensor::load(const void *src_) {
-    TO_BE_IMPLEMENTED();
+      auto kind = (this->deviceType() == LLAISYS_DEVICE_CPU)
+                  ? LLAISYS_MEMCPY_H2H
+                  : LLAISYS_MEMCPY_H2D;
+
+      core::context().runtime().api()->memcpy_sync(
+          this->data(),
+          const_cast<void *>(src_),
+          this->numel() * this->elementSize(),
+          kind);
 }
 
 tensor_t Tensor::contiguous() const {
