@@ -1,5 +1,9 @@
 #include "rope_metax.cuh"
 
+#include <mcr/mc_runtime.h>
+#include <common/maca_fp16.h>
+#include <common/maca_bfloat16.h>
+
 namespace llaisys::ops::metax {
 
 constexpr int BLOCK_SIZE = 256;
@@ -47,8 +51,8 @@ void rope(std::byte *out, const std::byte *in, const std::byte *pos_ids,
             seq_len, n_heads, dim, theta);
         break;
     case LLAISYS_DTYPE_BF16:
-        rope_kernel<__nv_bfloat16><<<grid, BLOCK_SIZE>>>(
-            (__nv_bfloat16 *)out, (const __nv_bfloat16 *)in,
+        rope_kernel<maca_bfloat16><<<grid, BLOCK_SIZE>>>(
+            (maca_bfloat16 *)out, (const maca_bfloat16 *)in,
             (const int64_t *)pos_ids, seq_len, n_heads, dim, theta);
         break;
     default:

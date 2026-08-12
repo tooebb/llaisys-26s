@@ -1,5 +1,9 @@
 #include "rms_norm_metax.cuh"
 
+#include <mcr/mc_runtime.h>
+#include <common/maca_fp16.h>
+#include <common/maca_bfloat16.h>
+
 namespace llaisys::ops::metax {
 
 constexpr int BLOCK_SIZE = 256;
@@ -49,9 +53,9 @@ void rms_norm(std::byte *out, const std::byte *in, const std::byte *weight,
             rows, cols, eps);
         break;
     case LLAISYS_DTYPE_BF16:
-        rms_norm_kernel<__nv_bfloat16><<<rows, BLOCK_SIZE>>>(
-            (__nv_bfloat16 *)out, (const __nv_bfloat16 *)in,
-            (__nv_bfloat16 *)weight, rows, cols, eps);
+        rms_norm_kernel<maca_bfloat16><<<rows, BLOCK_SIZE>>>(
+            (maca_bfloat16 *)out, (const maca_bfloat16 *)in,
+            (maca_bfloat16 *)weight, rows, cols, eps);
         break;
     default:
         break;

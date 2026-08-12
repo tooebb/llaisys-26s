@@ -1,5 +1,9 @@
 #include "argmax_metax.cuh"
 
+#include <mcr/mc_runtime.h>
+#include <common/maca_fp16.h>
+#include <common/maca_bfloat16.h>
+
 #include <cfloat>
 
 namespace llaisys::ops::metax {
@@ -77,7 +81,7 @@ void argmax(std::byte *max_idx, std::byte *max_val, const std::byte *vals,
         launch_argmax<__half>(max_idx, max_val, vals, numel);
         break;
     case LLAISYS_DTYPE_BF16:
-        launch_argmax<__nv_bfloat16>(max_idx, max_val, vals, numel);
+        launch_argmax<maca_bfloat16>(max_idx, max_val, vals, numel);
         break;
     default:
         break;

@@ -125,4 +125,10 @@ xmake f --nv-gpu=y --metax-gpu=y -cv && xmake
 |------|-----------|------|------|
 | CPU (MinGW-w64) | ✅ 通过 | ✅ 通过 | ✅ 通过 |
 | NVIDIA (CUDA) | ✅ 代码完成，缺卡未测 | ✅ 代码完成，缺卡未测 | ✅ 代码完成，缺卡未测 |
-| Metax (MXMACA) | ✅ 代码完成，缺卡未测 | ✅ 代码完成，缺卡未测 | ✅ 代码完成，缺卡未测 |
+| Metax (MXMACA) | ✅ 编译通过 | ✅ 编译通过 | ⚠️ 代码完成，未跑推理 |
+
+> 沐曦 (Metax) 平台已在真实服务器（曦云 C500 16GB，MXMACA SDK 3.2.1）上完成编译验证：
+> 2 个运行时/资源文件 + 8 个算子共 10 个 GPU 源文件全部通过 `mxcc` 编译。
+> 编译命令：`mxcc -x maca -offload-arch native -std=c++17 -I include -c <file>.cu -o <file>.o --maca-path=/opt/maca`
+> 适配要点：`mc_runtime.h`→`mcr/mc_runtime.h`、`mcblas.h`→`mcblas/mcblas.h`、`mcMemcpyKind_t`→`mcMemcpyKind`、`__nv_bfloat16`→`maca_bfloat16`、swiglu 显式类型转换。
+> NVIDIA (CUDA) 平台因缺卡暂未在真实 GPU 上验证。

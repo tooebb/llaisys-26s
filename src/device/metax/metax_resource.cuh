@@ -2,7 +2,7 @@
 
 #include "../device_resource.hpp"
 
-#include <mcblas.h>
+#include <mcblas/mcblas.h>
 
 namespace llaisys::device::metax {
 class Resource : public llaisys::device::DeviceResource {

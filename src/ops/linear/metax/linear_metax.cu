@@ -1,6 +1,9 @@
 #include "linear_metax.cuh"
 
-#include <mcblas.h>
+#include <mcr/mc_runtime.h>
+#include <common/maca_fp16.h>
+#include <common/maca_bfloat16.h>
+#include <mcblas/mcblas.h>
 
 namespace llaisys::ops::metax {
 
@@ -17,9 +20,9 @@ __global__ void add_bias_kernel(T *out, const T *bias, size_t M, size_t N) {
 }
 
 // BF16 tiled GEMM
-__global__ void bf16_gemm_kernel(__nv_bfloat16 *out,
-                                  const __nv_bfloat16 *in,
-                                  const __nv_bfloat16 *weight,
+__global__ void bf16_gemm_kernel(maca_bfloat16 *out,
+                                  const maca_bfloat16 *in,
+                                  const maca_bfloat16 *weight,
                                   size_t M, size_t K, size_t N) {
     int row = blockIdx.y * TILE + threadIdx.y;
     int col = blockIdx.x * TILE + threadIdx.x;
@@ -29,12 +32,12 @@ __global__ void bf16_gemm_kernel(__nv_bfloat16 *out,
     for (size_t k = 0; k < K; k++) {
         sum += float(in[row * K + k]) * float(weight[k * N + col]);
     }
-    out[row * N + col] = __nv_bfloat16(sum);
+    out[row * N + col] = maca_bfloat16(sum);
 }
 
-static void linear_bf16_impl(__nv_bfloat16 *out, const __nv_bfloat16 *in,
-                              const __nv_bfloat16 *weight,
-                              const __nv_bfloat16 *bias,
+static void linear_bf16_impl(maca_bfloat16 *out, const maca_bfloat16 *in,
+                              const maca_bfloat16 *weight,
+                              const maca_bfloat16 *bias,
                               size_t M, size_t K, size_t N) {
     dim3 block(TILE, TILE);
     dim3 grid((unsigned)((N + TILE - 1) / TILE),
@@ -44,7 +47,7 @@ static void linear_bf16_impl(__nv_bfloat16 *out, const __nv_bfloat16 *in,
     if (bias) {
         size_t total = M * N;
         size_t g = (total + BLOCK_SIZE - 1) / BLOCK_SIZE;
-        add_bias_kernel<__nv_bfloat16><<<g, BLOCK_SIZE>>>(out, bias, M, N);
+        add_bias_kernel<maca_bfloat16><<<g, BLOCK_SIZE>>>(out, bias, M, N);
     }
 }
 
@@ -112,9 +115,9 @@ void linear(std::byte *out, const std::byte *in, const std::byte *weight,
                         (const __half *)bias, M, K, N);
         break;
     case LLAISYS_DTYPE_BF16:
-        linear_bf16_impl((__nv_bfloat16 *)out, (const __nv_bfloat16 *)in,
-                         (const __nv_bfloat16 *)weight,
-                         (const __nv_bfloat16 *)bias, M, K, N);
+        linear_bf16_impl((maca_bfloat16 *)out, (const maca_bfloat16 *)in,
+                         (const maca_bfloat16 *)weight,
+                         (const maca_bfloat16 *)bias, M, K, N);
         break;
     default:
         break;

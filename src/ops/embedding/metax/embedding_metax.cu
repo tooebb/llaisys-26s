@@ -1,5 +1,9 @@
 #include "embedding_metax.cuh"
 
+#include <mcr/mc_runtime.h>
+#include <common/maca_fp16.h>
+#include <common/maca_bfloat16.h>
+
 namespace llaisys::ops::metax {
 
 constexpr int BLOCK_SIZE = 256;
@@ -33,9 +37,9 @@ void embedding(std::byte *out, const std::byte *index, const std::byte *weight,
             seq_len, dim);
         break;
     case LLAISYS_DTYPE_BF16:
-        embedding_kernel<__nv_bfloat16><<<grid, BLOCK_SIZE>>>(
-            (__nv_bfloat16 *)out, (const int64_t *)index,
-            (const __nv_bfloat16 *)weight, seq_len, dim);
+        embedding_kernel<maca_bfloat16><<<grid, BLOCK_SIZE>>>(
+            (maca_bfloat16 *)out, (const int64_t *)index,
+            (const maca_bfloat16 *)weight, seq_len, dim);
         break;
     default:
         break;

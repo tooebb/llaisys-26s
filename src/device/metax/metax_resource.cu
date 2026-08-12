@@ -1,6 +1,6 @@
 #include "metax_resource.cuh"
 
-#include <mc_runtime.h>
+#include <mcr/mc_runtime.h>
 
 namespace llaisys::device::metax {
 

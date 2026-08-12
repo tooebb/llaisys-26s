@@ -1,5 +1,9 @@
 #include "self_attention_metax.cuh"
 
+#include <mcr/mc_runtime.h>
+#include <common/maca_fp16.h>
+#include <common/maca_bfloat16.h>
+
 namespace llaisys::ops::metax {
 
 constexpr int MAX_THREADS = 256;
@@ -111,9 +115,9 @@ void self_attention(std::byte *attn_val, const std::byte *q,
             total_len, scale);
         break;
     case LLAISYS_DTYPE_BF16:
-        self_attention_kernel<__nv_bfloat16><<<grid, MAX_THREADS, smem>>>(
-            (__nv_bfloat16 *)attn_val, (const __nv_bfloat16 *)q,
-            (const __nv_bfloat16 *)k, (const __nv_bfloat16 *)v,
+        self_attention_kernel<maca_bfloat16><<<grid, MAX_THREADS, smem>>>(
+            (maca_bfloat16 *)attn_val, (const maca_bfloat16 *)q,
+            (const maca_bfloat16 *)k, (const maca_bfloat16 *)v,
             seq_len, n_heads, n_kv_heads, d, dv, total_len, scale);
         break;
     default:

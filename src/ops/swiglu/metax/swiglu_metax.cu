@@ -1,12 +1,16 @@
 #include "swiglu_metax.cuh"
 
+#include <mcr/mc_runtime.h>
+#include <common/maca_fp16.h>
+#include <common/maca_bfloat16.h>
+
 namespace llaisys::ops::metax {
 
 constexpr int BLOCK_SIZE = 256;
 
 template <typename T>
 __device__ T silu(T x) {
-    return x / (T(1.0f) + expf(-float(x)));
+    return x / (T(1.0f) + T(expf(-float(x))));
 }
 
 template <typename T>
@@ -30,9 +34,9 @@ void swiglu(std::byte *out, const std::byte *gate, const std::byte *up,
             (__half *)out, (const __half *)gate, (const __half *)up, numel);
         break;
     case LLAISYS_DTYPE_BF16:
-        swiglu_kernel<__nv_bfloat16><<<grid, BLOCK_SIZE>>>(
-            (__nv_bfloat16 *)out, (const __nv_bfloat16 *)gate,
-            (__nv_bfloat16 *)up, numel);
+        swiglu_kernel<maca_bfloat16><<<grid, BLOCK_SIZE>>>(
+            (maca_bfloat16 *)out, (const maca_bfloat16 *)gate,
+            (maca_bfloat16 *)up, numel);
         break;
     default:
         break;

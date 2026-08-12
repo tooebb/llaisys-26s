@@ -1,12 +1,12 @@
 #include "../runtime_api.hpp"
 
-#include <mc_runtime.h>
+#include <mcr/mc_runtime.h>
 
 namespace llaisys::device::metax {
 
 namespace runtime_api {
 
-static mcMemcpyKind_t to_mc_kind(llaisysMemcpyKind_t kind) {
+static mcMemcpyKind to_mc_kind(llaisysMemcpyKind_t kind) {
     switch (kind) {
     case LLAISYS_MEMCPY_H2H: return mcMemcpyHostToHost;
     case LLAISYS_MEMCPY_H2D: return mcMemcpyHostToDevice;
