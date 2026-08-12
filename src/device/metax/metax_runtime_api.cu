@@ -1,77 +1,76 @@
 #include "../runtime_api.hpp"
 
-#include <cuda_runtime.h>
+#include <mc_runtime.h>
 
-namespace llaisys::device::nvidia {
+namespace llaisys::device::metax {
 
 namespace runtime_api {
 
-// 将 LLAISYS 的 memcpy 方向转为 CUDA 的
-static cudaMemcpyKind to_cuda_kind(llaisysMemcpyKind_t kind) {
+static mcMemcpyKind_t to_mc_kind(llaisysMemcpyKind_t kind) {
     switch (kind) {
-    case LLAISYS_MEMCPY_H2H: return cudaMemcpyHostToHost;
-    case LLAISYS_MEMCPY_H2D: return cudaMemcpyHostToDevice;
-    case LLAISYS_MEMCPY_D2H: return cudaMemcpyDeviceToHost;
-    case LLAISYS_MEMCPY_D2D: return cudaMemcpyDeviceToDevice;
-    default:                  return cudaMemcpyDefault;
+    case LLAISYS_MEMCPY_H2H: return mcMemcpyHostToHost;
+    case LLAISYS_MEMCPY_H2D: return mcMemcpyHostToDevice;
+    case LLAISYS_MEMCPY_D2H: return mcMemcpyDeviceToHost;
+    case LLAISYS_MEMCPY_D2D: return mcMemcpyDeviceToDevice;
+    default:                  return mcMemcpyDefault;
     }
 }
 
 int getDeviceCount() {
     int count = 0;
-    cudaGetDeviceCount(&count);
+    mcGetDeviceCount(&count);
     return count;
 }
 
 void setDevice(int device_id) {
-    cudaSetDevice(device_id);
+    mcSetDevice(device_id);
 }
 
 void deviceSynchronize() {
-    cudaDeviceSynchronize();
+    mcDeviceSynchronize();
 }
 
 llaisysStream_t createStream() {
-    cudaStream_t stream = nullptr;
-    cudaStreamCreate(&stream);
+    mcStream_t stream = nullptr;
+    mcStreamCreate(&stream);
     return (llaisysStream_t)stream;
 }
 
 void destroyStream(llaisysStream_t stream) {
-    cudaStreamDestroy((cudaStream_t)stream);
+    mcStreamDestroy((mcStream_t)stream);
 }
 
 void streamSynchronize(llaisysStream_t stream) {
-    cudaStreamSynchronize((cudaStream_t)stream);
+    mcStreamSynchronize((mcStream_t)stream);
 }
 
 void *mallocDevice(size_t size) {
     void *ptr = nullptr;
-    cudaMalloc(&ptr, size);
+    mcMalloc(&ptr, size);
     return ptr;
 }
 
 void freeDevice(void *ptr) {
-    cudaFree(ptr);
+    mcFree(ptr);
 }
 
 void *mallocHost(size_t size) {
     void *ptr = nullptr;
-    cudaMallocHost(&ptr, size);
+    mcMallocHost(&ptr, size);
     return ptr;
 }
 
 void freeHost(void *ptr) {
-    cudaFreeHost(ptr);
+    mcFreeHost(ptr);
 }
 
 void memcpySync(void *dst, const void *src, size_t size, llaisysMemcpyKind_t kind) {
-    cudaMemcpy(dst, src, size, to_cuda_kind(kind));
+    mcMemcpy(dst, src, size, to_mc_kind(kind));
 }
 
 void memcpyAsync(void *dst, const void *src, size_t size,
                  llaisysMemcpyKind_t kind, llaisysStream_t stream) {
-    cudaMemcpyAsync(dst, src, size, to_cuda_kind(kind), (cudaStream_t)stream);
+    mcMemcpyAsync(dst, src, size, to_mc_kind(kind), (mcStream_t)stream);
 }
 
 static const LlaisysRuntimeAPI RUNTIME_API = {
@@ -93,4 +92,4 @@ static const LlaisysRuntimeAPI RUNTIME_API = {
 const LlaisysRuntimeAPI *getRuntimeAPI() {
     return &runtime_api::RUNTIME_API;
 }
-} // namespace llaisys::device::nvidia
+} // namespace llaisys::device::metax

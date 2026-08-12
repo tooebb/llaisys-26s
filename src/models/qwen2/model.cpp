@@ -11,7 +11,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstring>
 
 namespace llaisys::models {
 
@@ -161,7 +160,10 @@ void Qwen2Model::forward(const int64_t *token_ids, size_t ntoken,
     ops::argmax(max_idx, max_val, last_1d);
 
     int64_t next;
-    std::memcpy(&next, max_idx->data(), sizeof(int64_t));
+    auto kind = (max_idx->deviceType() == LLAISYS_DEVICE_CPU)
+                    ? LLAISYS_MEMCPY_H2H : LLAISYS_MEMCPY_D2H;
+    llaisys::core::context().runtime().api()->memcpy_sync(
+        &next, max_idx->data(), sizeof(int64_t), kind);
     *out_token = next;
 
     cache_len = total_len;

@@ -5,6 +5,13 @@
 
 #include "cpu/self_attention_cpu.hpp"
 
+#ifdef ENABLE_NVIDIA_API
+#include "nvidia/self_attention_nvidia.cuh"
+#endif
+#ifdef ENABLE_METAX_API
+#include "metax/self_attention_metax.cuh"
+#endif
+
 namespace llaisys::ops {
 
 void self_attention(tensor_t attn_val, tensor_t q, tensor_t k, tensor_t v, float scale) {
@@ -43,8 +50,17 @@ void self_attention(tensor_t attn_val, tensor_t q, tensor_t k, tensor_t v, float
 
 #ifdef ENABLE_NVIDIA_API
     case LLAISYS_DEVICE_NVIDIA:
-        TO_BE_IMPLEMENTED();
-        return;
+        return nvidia::self_attention(
+            attn_val->data(), q->data(), k->data(), v->data(),
+            attn_val->dtype(), seq_len, n_heads, n_kv_heads,
+            d, dv, total_len, scale);
+#endif
+#ifdef ENABLE_METAX_API
+    case LLAISYS_DEVICE_METAX:
+        return metax::self_attention(
+            attn_val->data(), q->data(), k->data(), v->data(),
+            attn_val->dtype(), seq_len, n_heads, n_kv_heads,
+            d, dv, total_len, scale);
 #endif
 
     default:

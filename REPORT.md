@@ -97,9 +97,32 @@ python test/ops/self_attention.py
 python test/ops/swiglu.py
 ```
 
+### 作业 #4：CUDA 集成
+
+实现了 NVIDIA CUDA 和沐曦 (Metax) MXMACA 两个平台的 GPU 加速代码。
+
+| 模块 | 文件 |
+|------|------|
+| NVIDIA 运行时 API | `src/device/nvidia/nvidia_runtime_api.cu` — 12 个 CUDA Runtime 函数 |
+| NVIDIA 资源 | `src/device/nvidia/nvidia_resource.cu/.cuh` — cuBLAS handle |
+| Metax 运行时 API | `src/device/metax/metax_runtime_api.cu` — 12 个 MC Runtime 函数 |
+| Metax 资源 | `src/device/metax/metax_resource.cu/.cuh` — mcBLAS handle |
+| CUDA 算子 (×8) | `src/ops/*/nvidia/` — add, argmax, embedding, swiglu, rms_norm, rope, linear(cuBLAS), self_attention |
+| MXMACA 算子 (×8) | `src/ops/*/metax/` — 同上，API 前缀 cuda→mc, cublas→mcblas |
+| 编译配置 | `xmake/nvidia.lua`, `xmake/metax.lua` |
+| 设备枚举 | `include/llaisys.h` — 新增 `LLAISYS_DEVICE_METAX = 2` |
+| 分发逻辑 | 8 个 `op.cpp` — #ifdef ENABLE_NVIDIA_API / ENABLE_METAX_API |
+| 模型适配 | `model.cpp` — device-aware memcpy (H2D/D2H) |
+
+启用编译：
+```bash
+xmake f --nv-gpu=y --metax-gpu=y -cv && xmake
+```
+
 ## 平台支持
 
 | 平台 | 运行时 API | 算子 | 推理 |
 |------|-----------|------|------|
 | CPU (MinGW-w64) | ✅ 通过 | ✅ 通过 | ✅ 通过 |
-| NVIDIA (CUDA) | 未实现 | 未实现 | 未实现 |
+| NVIDIA (CUDA) | ✅ 代码完成，缺卡未测 | ✅ 代码完成，缺卡未测 | ✅ 代码完成，缺卡未测 |
+| Metax (MXMACA) | ✅ 代码完成，缺卡未测 | ✅ 代码完成，缺卡未测 | ✅ 代码完成，缺卡未测 |

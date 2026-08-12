@@ -2,14 +2,14 @@
 
 #include "../device_resource.hpp"
 
-#include <cublas_v2.h>
+#include <mcblas.h>
 
-namespace llaisys::device::nvidia {
+namespace llaisys::device::metax {
 class Resource : public llaisys::device::DeviceResource {
 public:
-    cublasHandle_t cublas_handle;
+    mcblasHandle_t mcblas_handle;
 
     Resource(int device_id);
     ~Resource();
 };
-} // namespace llaisys::device::nvidia
+} // namespace llaisys::device::metax
