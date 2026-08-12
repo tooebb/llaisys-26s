@@ -35,13 +35,15 @@ python test/test_tensor.py  # 全部通过
 
 实现了 7 个 CPU 算子的 F32/F16/BF16 版本：
 
-- argmax — 1D 张量求最大值索引
-- embedding — 查表取行
-- linear — 矩阵乘法 Y = X·W^T + b
-- rms_norm — RMS 归一化
-- rope — 旋转位置编码
-- self_attention — 因果自注意力（含 GQA 支持）
-- swiglu — SwiGLU 激活函数
+| 算子 | 功能 |
+|------|------|
+| argmax | 1D 张量求最大值索引 |
+| embedding | 查表取行 |
+| linear | 矩阵乘法 Y = X·W^T + b |
+| rms_norm | RMS 归一化 |
+| rope | 旋转位置编码 |
+| self_attention | 因果自注意力（含 GQA 支持） |
+| swiglu | SwiGLU 激活函数 |
 
 测试结果：
 ```
@@ -52,6 +54,25 @@ python test/ops/rms_norm.py        # 通过
 python test/ops/rope.py            # 通过
 python test/ops/self_attention.py  # 通过
 python test/ops/swiglu.py          # 通过
+```
+
+### 作业 #3：Qwen2 推理引擎
+
+实现了完整的 Qwen2 LLM 推理流程：
+
+| 模块 | 文件 | 说明 |
+|------|------|------|
+| C API 包装 | `src/llaisys/qwen2.cc` | 不透明句柄，4 个导出函数（Create/Destroy/Weights/Infer） |
+| 模型结构 | `src/models/qwen2/model.{hpp,cpp}` | init_cache 预分配工作区，forward 完整前向流程 |
+| ctypes 绑定 | `python/llaisys/libllaisys/models.py` | Structure 子类，argtypes/restype 设置 |
+| Python 包装 | `python/llaisys/models/qwen2.py` | safetensors 权重加载 + generate() 自回归生成 |
+
+前向流程：embedding → 28 层 (RMSNorm → Q/K/V 线性 → RoPE → KV Cache → SelfAttention → O 投影 → residual → RMSNorm → Gate/Up → SwiGLU → Down → residual) → RMSNorm → 输出线性 → argmax
+
+测试结果：
+```
+python -c "from llaisys.models.qwen2 import Qwen2; ..."
+# 输入 [1, 2, 3]，生成 5 个 token，结果 [4, 3, 3, 2, 3]，通过
 ```
 
 ## 复现流程
@@ -80,5 +101,5 @@ python test/ops/swiglu.py
 
 | 平台 | 运行时 API | 算子 | 推理 |
 |------|-----------|------|------|
-| CPU (MinGW-w64) | ✅ 通过 | ✅ 通过 | 未完成 |
+| CPU (MinGW-w64) | ✅ 通过 | ✅ 通过 | ✅ 通过 |
 | NVIDIA (CUDA) | 未实现 | 未实现 | 未实现 |
